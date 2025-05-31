@@ -1,289 +1,1070 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HyperPrinter Coin Gallery</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/controls/PointerLockControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/nipplejs@0.10.0/dist/nipplejs.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #000;
+            font-family: 'Courier New', monospace;
+            color: #0f0;
+        }
+        canvas {
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
 
-  <link rel="stylesheet" type="text/css" href="./style.css">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <title>Hyper Printer</title>
-  <link rel="icon" href="monkey.jpg" type="image/x-icon" />
-  <link href="https://fonts.cdnfonts.com/css/biski-trial" rel="stylesheet">
+        /* Terminal Styles */
+        #terminal {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 800px;
+            height: 500px;
+            background: rgba(0, 20, 0, 0.85);
+            border: 2px solid #0f0;
+            border-radius: 5px;
+            padding: 15px;
+            color: #0f0;
+            overflow: hidden;
+            display: none;
+            z-index: 100;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
+            resize: both;
+            min-width: 400px;
+            min-height: 300px;
+            max-width: 90vw;
+            max-height: 90vh;
+        }
+        .mobile #terminal {
+            width: 90vw;
+            height: 80vh;
+            min-width: 300px;
+            min-height: 400px;
+        }
+        .terminal-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #0f0;
+            padding-bottom: 5px;
+        }
+        .terminal-title {
+            font-weight: bold;
+            text-shadow: 0 0 5px #0f0;
+        }
+        .terminal-body {
+            height: calc(100% - 80px);
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+        .command-line {
+            display: flex;
+            margin-top: 10px;
+        }
+        .prompt {
+            margin-right: 10px;
+            color: #0f0;
+        }
+        .command {
+            flex-grow: 1;
+            background: transparent;
+            border: none;
+            color: #0f0;
+            font-family: 'Courier New', monospace;
+            outline: none;
+        }
+        .output { line-height: 1.4; margin-bottom: 5px; }
+        .success { color: #0f0; }
+        .error { color: #f00; }
+        .info { color: #0ff; }
+        .terminal-body a {
+            color: #0ff;
+            text-decoration: underline;
+            cursor: pointer;
+        }
+        .terminal-body a:hover {
+            color: #0f0;
+        }
+        .copy-btn {
+            background: #0f0;
+            color: #000;
+            padding: 2px 8px;
+            margin-left: 10px;
+            cursor: pointer;
+            border-radius: 3px;
+        }
+        .copy-btn:hover {
+            background: #0ff;
+        }
+        .close-btn {
+            cursor: pointer;
+            color: #f00;
+            font-weight: bold;
+        }
+        .close-btn:hover {
+            color: #ff0;
+        }
+
+        /* Joystick and Terminal Button */
+        #joystick-container {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            width: 100px;
+            height: 100px;
+            z-index: 100;
+            display: none;
+        }
+        .mobile #joystick-container {
+            display: block;
+        }
+        #terminal-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #0f0;
+            color: #000;
+            padding: 10px 20px;
+            border: 2px solid #0f0;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            cursor: pointer;
+            z-index: 100;
+            display: none;
+        }
+        .mobile #terminal-btn {
+            display: block;
+        }
+        #terminal-btn.terminal-hidden {
+            display: none;
+        }
+        #terminal-btn:hover {
+            background: #0ff;
+        }
+
+        /* CRT Effects */
+        .crt-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 9999;
+            mix-blend-mode: overlay;
+            animation: noise 0.1s infinite;
+        }
+        @keyframes noise {
+            0% { background-position: 0 0; }
+            100% { background-position: 10px 10px; }
+        }
+        .crt-glow {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, rgba(0, 255, 0, 0.05) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 9998;
+        }
+        .scanline {
+            position: fixed;
+            width: 100%;
+            height: 1px;
+            background: rgba(0, 255, 0, 0.7);
+            animation: scanline 3s linear infinite;
+            z-index: 9997;
+            pointer-events: none;
+        }
+        @keyframes scanline {
+            0% { top: 0%; }
+            100% { top: 100%; }
+        }
+
+        /* Coin Animation */
+        #printedCoin {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 10000;
+            animation: print-anim 1.5s forwards;
+        }
+        @keyframes print-anim {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.1) rotate(0deg); }
+            50% { opacity: 1; transform: translate(-50%, -50%) scale(1.2) rotate(10deg); }
+            100% { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+        }
+
+        /* Instructions */
+        #instructions {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            color: #0f0;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border: 1px solid #0f0;
+            font-family: 'Courier New', monospace;
+            z-index: 100;
+        }
+        .mobile #instructions {
+            bottom: 130px; /* Adjusted for joystick */
+        }
+
+        /* Crosshair */
+        #crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 20px;
+            height: 20px;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 100;
+        }
+        .mobile #crosshair {
+            display: none;
+        }
+        #crosshair::before, #crosshair::after {
+            content: '';
+            position: absolute;
+            background: #0f0;
+        }
+        #crosshair::before {
+            width: 2px;
+            height: 20px;
+            left: 9px;
+            top: 0;
+        }
+        #crosshair::after {
+            width: 20px;
+            height: 2px;
+            left: 0;
+            top: 9px;
+        }
+
+        /* Glitch Effect */
+        @keyframes glitch {
+            0% { transform: translate(0); }
+            20% { transform: translate(-2px, 2px); }
+            40% { transform: translate(-2px, -2px); }
+            60% { transform: translate(2px, 2px); }
+            80% { transform: translate(2px, -2px); }
+            100% { transform: translate(0); }
+        }
+        .glitch-effect {
+            animation: glitch 0.5s infinite alternate;
+        }
+
+        /* Fallback Message */
+        #fallback {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #f00;
+            font-size: 24px;
+            text-align: center;
+            z-index: 1000;
+            display: none;
+        }
+
+        /* Landing Page */
+        #landing-page {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 10, 0, 0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            color: #0f0;
+            font-family: 'Courier New', monospace;
+            text-align: center;
+        }
+        #landing-page h1 {
+            font-size: 48px;
+            text-shadow: 0 0 10px #0f0;
+            animation: glitch 0.5s infinite alternate;
+            margin-bottom: 20px;
+        }
+        #landing-page p {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        #landing-page .prompt {
+            font-size: 18px;
+            color: #0ff;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+    </style>
 </head>
-
-
-<body>
-  <div class="slide-container">
-    <div class="slide-text">
-      $HYPERPRINTER -
-      $HYPERPRINTER -
-      $HYPERPRINTER -
-      $HYPERPRINTER -
-      $HYPERPRINTER -
-      $HYPERPRINTER -
-      $HYPERPRINTER -
-      $HYPERPRINTER -
-      $HYPERPRINTER -
-      $HYPERPRINTER -
-      $HYPERPRINTER -
-      $HYPERPRINTER -
-      $HYPERPRINTER -
-      $HYPERPRINTER -
-      $HYPERPRINTER -
+<body class="bg-black text-green-400">
+    <!-- Landing Page -->
+    <div id="landing-page">
+        <h1 class="glitch-effect">HYPERPRINTER COIN GALLERY</h1>
+        <p>Welcome to the Future of Digital Collectibles</p>
+        <p class="prompt">Click Anywhere to Enter</p>
     </div>
-  </div>
-  <!-- <div class="scratchcontainer">
-    <img class="scratch" src="logo.avif">
-  </div> -->
-  <div class="introduction">
-    <div class="headermain">
-      <h1>HYPER PRINTER</h1>
-    </div>
-  </div>
 
-  <!-- <div class="info">
+    <!-- 3D Scene -->
+    <div id="crosshair"></div>
+    <div id="instructions">Click to enable controls | WASD to move | E to interact | T for info in terminal</div>
+    <div id="fallback">Error: 3D Scene Failed to Load. Check Console for Details.</div>
 
-    <iframe id="youtubePlayer" src="https://www.youtube.com/embed/dy-u0voqixQ?autoplay=1" frameborder="0"
-      allow="autoplay; encrypted-media" allowfullscreen></iframe>
-
-  </div> -->
-
-
-  <div class="tokenomics">
-    <div class="info">
-
-      <div class="infoinner">
-        <img class="mainimage" src="monkey.jpg">
-      </div>
-      <div class="infoinnerx">
-        <div class="about">
-          <h1>ABOUT</h1>
+    <!-- Terminal Interface -->
+    <div id="terminal">
+        <div class="terminal-header">
+            <div class="terminal-title glitch-effect">HYPERPRINTER TERMINAL v2.0</div>
+            <div>
+                <span class="terminal-status">STATUS: <span class="success">ACTIVE</span></span>
+                <span class="close-btn" onclick="closeTerminal()">X</span>
+            </div>
         </div>
-        <h3 class="abouttext">Hyper Printer is a reward-based token built on the Hyper EVM chain. It automatically
-          rewards holders with the native $HYPER token, promoting long-term holding and community growth.<br>
-
-        </h3>
-        <h3 class="abouttext">
-          Our goal is to
-          create a sustainable ecosystem where users benefit simply by holding.
-        </h3>
-        <button class="copybutton" onclick="location.href='#'">📝 Docs</button>
-        <button class="copybutton" onclick="window.open('https://t.me/HyperprinterBot', '_blank')">🤖 Reward Bot</button>
-
-      </div>
-    </div>
-  </div>
-  <br><br><br>
-  <div class="socials">
-    <a href="https://x.com/Hyper_Printer" target="_blank">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 26 24" fill="none" preserveAspectRatio="xMidYMid meet"
-        aria-hidden="true" role="img">
-        <path
-          d="M0.478516 0.348747L9.6645 13.4766L0.961456 23.6512H4.37997L11.1942 15.6638L16.7822 23.6512H25.728L16.1197 9.8963L24.264 0.348747H20.8985L14.595 7.71169L9.4521 0.348747H0.478516ZM5.44951 2.93791H8.10189L20.7595 21.0621H18.1299L5.44951 2.93791Z">
-        </path>
-      </svg>
-    </a>
-    <a href="https://t.me/hyperprintertg" target="_blank">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 27 23" fill="none" preserveAspectRatio="xMidYMid meet"
-        aria-hidden="true" role="img">
-        <path
-          d="M2.25749 9.75177C10.3927 6.1729 20.9202 1.80951 22.3734 1.20558C26.1853 -0.375101 27.3549 -0.0721691 26.7717 3.42838C26.3529 5.94441 25.1444 14.2744 24.1813 19.4592C23.6097 22.5338 22.3274 22.8983 20.3111 21.5681C19.3415 20.9279 14.4473 17.6915 13.3851 16.9315C12.4154 16.2389 11.0781 15.4059 12.7553 13.765C13.3521 13.1805 17.2643 9.44496 20.3124 6.53732C20.7118 6.15542 20.2101 5.5282 19.7493 5.83437C15.6409 8.55882 9.94473 12.3403 9.21976 12.8329C8.12454 13.5766 7.07269 13.9177 5.18454 13.3753C3.75791 12.9656 2.36429 12.4769 1.82186 12.2905C-0.266948 11.5733 0.228877 10.6444 2.25749 9.75177Z">
-        </path>
-      </svg>
-    </a>
-    <a href="https://dexscreener.com/hyperevm/0x000000000000000000000000000000000" target="_blank">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 24" fill="none" preserveAspectRatio="xMidYMid meet"
-        aria-hidden="true" role="img">
-        <path
-          d="M14.789 7.58051C13.8931 8.28778 12.9982 8.804 12.295 9.15468C12.809 9.44513 13.375 9.50889 13.8598 9.39968C14.1153 9.34236 14.3464 9.2363 14.5315 9.09061C14.7024 8.95581 14.8323 8.78637 14.9013 8.59156C14.9986 8.31514 14.9779 7.97281 14.789 7.58051Z"
-          fill="          "></path>
-        <path
-          d="M13.3479 13.2856L12.4169 12.7478C12.3268 12.7138 12.2499 12.6521 12.197 12.5716C12.1441 12.4912 12.1181 12.396 12.1226 12.2999C12.2079 10.4953 11.7207 9.69733 11.0635 9.19629C10.8277 9.01681 10.5703 8.92669 10.3164 8.92669C10.0625 8.92669 9.8052 9.01681 9.56947 9.19629C8.91225 9.69733 8.42501 10.4953 8.51031 12.2999C8.51482 12.396 8.48879 12.4912 8.43593 12.5716C8.38306 12.6521 8.30609 12.7138 8.21603 12.7478L7.28508 13.2856C9.06534 14.2834 9.63157 16.082 10.2005 17.8892C10.239 18.0115 10.2775 18.1339 10.3164 18.256C10.3554 18.1337 10.394 18.0112 10.4325 17.8888C11.0014 16.0818 11.5677 14.2833 13.3479 13.2856Z">
-        </path>
-        <path
-          d="M13.4076 1.60916C12.4713 1.20277 11.3925 0.993857 10.3164 0.964966C9.2404 0.993857 8.16162 1.20277 7.2253 1.60916C6.57697 1.89095 5.97202 2.26317 5.42424 2.70827C5.17694 2.9092 4.97325 3.1034 4.74878 3.32679C4.1436 3.34771 3.25916 2.67539 2.84863 2.04629C3.55528 4.36298 6.77983 7.09878 9.01234 8.14562C9.01326 8.14532 9.01387 8.14463 9.01456 8.14424C9.41521 7.83831 9.86574 7.68535 10.3164 7.68535C10.7671 7.68535 11.2177 7.83831 11.6184 8.14424C11.6191 8.1447 11.6197 8.14524 11.6206 8.14562C13.853 7.09878 17.0777 4.36298 17.7843 2.04629C17.3737 2.67539 16.4893 3.34771 15.8841 3.32679C15.6597 3.10332 15.456 2.9092 15.2086 2.70827C14.6608 2.26317 14.0559 1.89095 13.4076 1.60916Z">
-        </path>
-        <path
-          d="M5.84389 7.58051C6.73975 8.28778 7.63468 8.804 8.33788 9.15468C7.82389 9.44513 7.25795 9.50889 6.77316 9.39968C6.51766 9.34236 6.28653 9.2363 6.10138 9.09061C5.93056 8.95581 5.80059 8.78637 5.73154 8.59156C5.63429 8.31514 5.65499 7.97281 5.84389 7.58051Z">
-        </path>
-        <path
-          d="M17.0472 5.17322C16.6978 5.66483 16.2632 6.21576 15.7699 6.71351L15.924 7.03354C16.2232 7.65505 16.3224 8.34983 16.0892 9.01066C15.939 9.43629 15.6646 9.8013 15.3111 10.0799C14.9679 10.3505 14.5615 10.5329 14.1361 10.6287C13.859 10.6911 13.5767 10.7168 13.2962 10.7081C13.3616 11.079 13.3902 11.4638 13.392 11.8559L15.8953 13.3017L13.9637 14.3845C13.8093 14.471 13.6623 14.5702 13.5242 14.681C12.2253 15.8472 11.3489 18.8762 10.7128 21.0746C10.569 21.5716 10.4375 22.0261 10.3162 22.4071C10.1949 22.0262 10.0634 21.5719 9.91971 21.0751C9.28366 18.8767 8.40718 15.8473 7.10818 14.681C6.97012 14.5702 6.82315 14.471 6.66876 14.3845L4.73711 13.3017L7.24029 11.8559C7.24213 11.4638 7.27072 11.079 7.33616 10.7081C7.05568 10.7168 6.77336 10.6911 6.49625 10.6287C6.07085 10.5329 5.66454 10.3505 5.32122 10.0799C4.96762 9.8013 4.69335 9.43629 4.54307 9.01066C4.30995 8.34983 4.40904 7.65498 4.70829 7.03354L4.86233 6.71359C4.36903 6.21576 3.93452 5.66491 3.58506 5.17329L3.40765 5.50735C2.83611 6.65044 2.53931 7.78901 2.53931 9.07043L2.54054 11.1037L2.52981 12.1578C2.48835 14.7454 1.92846 17.3635 0.660156 19.7595L3.31385 17.6196L5.19147 20.6666L7.16397 18.8096L10.3161 23.9249L13.4682 18.8096L15.4408 20.6665L17.3184 17.6196L19.972 19.7594C18.7037 17.3634 18.1438 14.7454 18.1025 12.1577L18.0917 11.1036L18.093 9.07035C18.093 7.78901 17.7961 6.65044 17.2247 5.50727L17.0472 5.17322Z">
-        </path>
-      </svg>
-    </a>
-    <a href="https://www.dextools.io/app/en/hyperevm/pair-explorer/0x000000000000000000000000000000000?t=1726356373318"
-      target="_blank">
-      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <g clip-path="url(#clip0_3058_1329)">
-          <path fill-rule="evenodd" clip-rule="evenodd"
-            d="M9.78405 2.19883C8.53443 2.84979 7.51206 3.40063 7.51227 3.42303C7.51283 3.48086 10.5114 4.99946 10.6178 4.99576C10.6663 4.99414 11.0175 4.83247 11.3983 4.63654L12.0907 4.28037L12.847 4.66911L13.6032 5.05791L14.8417 4.50141C16.7079 3.66285 16.9017 3.57096 16.8713 3.54009C16.831 3.49913 16.1616 3.13954 14.3457 2.18349C13.468 1.72142 12.6162 1.26838 12.4527 1.17671C12.2892 1.08503 12.1331 1.01129 12.1058 1.01272C12.0785 1.01414 11.0337 1.5479 9.78405 2.19883ZM4.3032 5.03701L3.00235 5.70894V8.65793C3.00235 10.2799 3.01943 11.6069 3.04038 11.6069C3.06126 11.6069 3.70128 11.3295 4.46261 10.9904L5.84686 10.3738V7.26541L6.52329 7.63394C7.04454 7.91767 7.56611 8.20082 8.08799 8.48339L8.97622 8.96431L9.37146 8.78558C9.61934 8.67331 9.86673 8.55995 10.1136 8.4455C10.3044 8.35666 10.7727 8.14573 11.1543 7.97668C11.5358 7.80756 11.8891 7.6375 11.9391 7.59874C12.0057 7.54725 11.1944 7.09892 8.9384 5.94044C7.23788 5.06718 5.79199 4.35547 5.72531 4.35888C5.65863 4.36229 5.01868 4.66741 4.3032 5.03701ZM17.1057 5.2257C16.2198 5.62566 15.4943 5.96889 15.4935 5.98846C15.4927 6.00801 15.9756 6.29513 16.5666 6.6264C17.1576 6.95775 17.6411 7.24656 17.6411 7.26831C17.6411 7.29001 17.1181 7.5434 16.479 7.83151C15.8398 8.11955 14.2243 8.84916 12.8887 9.45289L8.41384 11.4756C7.28818 11.9845 6.27353 12.4431 6.15907 12.495C3.85985 13.5358 3.22789 13.8246 3.1411 13.8742C3.05383 13.9241 3.03407 14.2141 3.01853 15.6695L3 17.4053L4.16328 17.998L5.32653 18.5907L6.93956 17.8627C7.82676 17.4624 8.5526 17.1138 8.5526 17.0882C8.5526 17.0626 8.38865 16.9557 8.18837 16.8507C7.98799 16.7456 7.57436 16.5131 7.26909 16.3338C6.96385 16.1545 6.65949 15.99 6.59266 15.9682C6.52586 15.9464 6.47217 15.9084 6.47326 15.8835C6.47437 15.8588 7.18468 15.5214 8.05162 15.1337C9.7355 14.3809 11.0241 13.8006 13.7906 12.5495C15.0277 11.9902 16.265 11.4312 17.5024 10.8726C18.5899 10.3817 19.8543 9.80843 20.3122 9.59862L21.1447 9.21714L21.1632 7.46155L21.1818 5.70604L20.002 5.10045C19.353 4.76741 18.7983 4.49573 18.7693 4.49672C18.7402 4.49764 17.9916 4.82564 17.1057 5.2257ZM20.8286 11.5592C20.6548 11.6441 20.3113 11.8031 20.0655 11.9125C19.8196 12.0219 19.353 12.2324 19.0287 12.3804L18.439 12.6494L18.4255 14.1906C18.4181 15.0383 18.3869 15.7281 18.3561 15.7236C18.2863 15.7132 17.1811 15.1464 16.0701 14.551C15.2682 14.1214 15.2178 14.1043 15.0294 14.1977C14.9205 14.2516 14.2694 14.5436 13.5825 14.8467C12.8957 15.1497 12.3113 15.4174 12.2838 15.4416C12.2564 15.4658 13.6388 16.215 15.3558 17.1066L18.4776 18.7278L19.8112 18.0379C20.5446 17.6585 21.1682 17.3125 21.197 17.2689C21.2616 17.1711 21.2561 11.3913 21.1913 11.3992C21.1657 11.4022 21.0025 11.4743 20.8286 11.5592ZM13.4438 18.3431C13.2124 18.4426 12.9812 18.5422 12.75 18.6419C12.0518 18.944 12.1886 18.954 11.358 18.5405C10.8048 18.2651 10.5664 18.1801 10.4629 18.2214C10.3852 18.2523 9.71703 18.5529 8.97789 18.8894C8.23879 19.2259 7.60842 19.5012 7.57707 19.5012C7.26697 19.5012 7.7825 19.8092 9.77186 20.8127L12.1049 21.9894L13.0865 21.5048C13.6264 21.2383 14.7154 20.7045 15.5065 20.3187C16.2975 19.9328 16.935 19.6071 16.9231 19.5948C16.911 19.5825 16.2482 19.2422 15.45 18.8384L13.9988 18.1044L13.4438 18.3431Z">
-          </path>
-        </g>
-        <defs>
-          <clipPath id="clip0_3058_1329">
-            <rect width="18.2616" height="21" fill="white" transform="translate(3 1)">
-            </rect>
-          </clipPath>
-        </defs>
-      </svg>
-    </a>
-  </div>
-  <div class="copycontract">
-    <button onclick="copyFunction()" class="copybutton">COPY</button>
-    <h3>0x000000000000000000000000000000000</h3>
-  </div>
-  <br>
-
-  <div class="tokenomics">
-    <br>
-    <h1>$HYPERPRINTERNOMICS</h1>
-
-    <div class="info2">
-
-      <div class="infoinner2">
-        LIQUIDITY <br>
-        <font class="tokenomics_font">BURNED</font>
-
-
-      </div>
-      <div class="infoinner2">
-        OWNERSHIP <br>
-        <font class="tokenomics_font">RENOUNCED </font>
-      </div>
+        <div class="terminal-body" id="terminalOutput"></div>
+        <div class="command-line">
+            <span class="prompt">></span>
+            <input type="text" class="command" id="terminalInput" autocomplete="off">
+        </div>
     </div>
 
-    <div class="info2">
-      <div class="infoinner2">
-        TAX <br>
-        <font class="tokenomics_font">2/2<br>to $HYPE rewards</font>
-      </div>
-      <div class="infoinner2">
-        SUPPLY <br>
-        <font class="tokenomics_font">1.000.000.000</font>
-      </div>
+    <!-- Joystick and Terminal Button -->
+    <div id="joystick-container"></div>
+    <button id="terminal-btn" onclick="toggleTerminal()">Terminal</button>
+
+    <!-- Printed Coin Display -->
+    <div id="printedCoin" class="coin-print">
+        <div class="relative">
+            <div class="w-64 h-64 bg-black rounded-full border-4 border-green-400 flex items-center justify-center shadow-xl shadow-green-400/50">
+                <div class="text-8xl font-bold">HYPERPRINT</div>
+            </div>
+            <div class="absolute -bottom-8 left-0 right-0 text-center text-sm">
+                PRINTED: <span id="printTime"></span>
+            </div>
+        </div>
     </div>
-    <br>
-    <br>
-    <br>
-  </div>
 
-  <div class="tokenomics2">
-    <br>
-    <h1>HOW TO BUY ?</h1>
+    <!-- CRT Effects -->
+    <div class="crt-overlay"></div>
+    <div class="crt-glow"></div>
+    <div class="scanline" id="scanline"></div>
 
-    <div class="info3">
+    <script>
+        // Detect mobile device
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+        if (isMobile) {
+            document.body.classList.add('mobile');
+            document.getElementById('instructions').textContent = 'Use joystick to move | Drag to look | Tap Terminal for info';
+        }
 
-      <div style="background-color: #00584C;" class="infoinner3">
-        <img class="mainimage2" src="fox.webp"><br>
-        Add chain to Metamask
-        <h4>First things first, you'll need to install the MetaMask wallet. Since the HyperChain is new, you'll need to
-          manually add the chain to your wallet. The RPC endpoint is:
-          [https://rpc.hyperliquid.xyz/evm]<br> The Chain ID is: 999<br> and the symbol is:
-          $HYPE.</h4>
-      </div>
-      <div style="background-color: #00584C;" class="infoinner3">
-        <img class="mainimage2" src="./32196.png"><br>
-        Get $HYPE
-        <h4>Go to your favorite exchange, buy some HYPE, and then send it directly to your MetaMask wallet. After
-          selecting the previously added chain, you should be able to see your HYPE tokens. </h4>
+        // Hide landing page on click/touch
+        const landingPage = document.getElementById('landing-page');
+        landingPage.addEventListener('click', () => {
+            landingPage.style.display = 'none';
+            if (!isMobile) {
+                renderer.domElement.requestPointerLock();
+            }
+            console.log("Landing page dismissed");
+        });
+        landingPage.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            landingPage.style.display = 'none';
+            console.log("Landing page dismissed via touch");
+        });
 
+        // Debug logging
+        console.log("Starting Three.js setup...");
 
-      </div>
-      <div style="background-color: #00584C;" class="infoinner3">
+        // Initialize Three.js scene
+        let scene, camera, renderer, controls;
+        try {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.domElement.style.zIndex = 1;
+            document.body.appendChild(renderer.domElement);
+            console.log("Renderer initialized successfully");
+        } catch (e) {
+            console.error("Failed to initialize Three.js:", e);
+            document.getElementById('fallback').style.display = 'block';
+            document.getElementById('instructions').textContent = 'Error: WebGL initialization failed. Check console.';
+        }
 
-        <img class="mainimage2" src="hyperswap.jpg"><br>
-        3. Buy $HYPERPRINT
-        <h4>Visit [https://app.hyperswap.exchange] <br> swap your $HYPE for $HYPERPRINT using the official contract address (CA) found on our page!
-        </h4>
-      </div>
-    </div>
-    <br>
-    <br>
-    <br>
-  </div>
+        // Room (Walls)
+        try {
+            const roomGeometry = new THREE.BoxGeometry(20, 20, 20);
+            const roomMaterial = new THREE.MeshStandardMaterial({
+                color: 0xD2B48C,
+                side: THREE.BackSide,
+                roughness: 0.8
+            });
+            const room = new THREE.Mesh(roomGeometry, roomMaterial);
+            scene.add(room);
+            console.log("Room (walls) added to scene with light brown (0xD2B48C)");
+        } catch (e) {
+            console.error("Failed to create room:", e);
+        }
 
-  <div class="finishing">
-    <h4 class="finishingtopic">HYPER PRINTER</h4>
-    <div class="socialsfinish">
+        // Floor
+        try {
+            const floorGeometry = new THREE.PlaneGeometry(20, 20);
+            const floorMaterial = new THREE.MeshStandardMaterial({
+                color: 0x8B4513,
+                roughness: 0.9
+            });
+            const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+            floor.rotation.x = -Math.PI / 2;
+            floor.position.y = 0;
+            scene.add(floor);
+            console.log("Floor added to scene");
+        } catch (e) {
+            console.error("Failed to create floor:", e);
+        }
 
-      <a href="https://x.com/Hyper_Printer" target="_blank">
-        <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 26 24" fill="none"
-          preserveAspectRatio="xMidYMid meet" aria-hidden="true" role="img">
-          <path
-            d="M0.478516 0.348747L9.6645 13.4766L0.961456 23.6512H4.37997L11.1942 15.6638L16.7822 23.6512H25.728L16.1197 9.8963L24.264 0.348747H20.8985L14.595 7.71169L9.4521 0.348747H0.478516ZM5.44951 2.93791H8.10189L20.7595 21.0621H18.1299L5.44951 2.93791Z"
-            fill="#ffd900"></path>
-        </svg>
-      </a>
-      <a href="https://t.me/hyperprintertg" target="_blank">
-        <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 27 23" fill="none"
-          preserveAspectRatio="xMidYMid meet" aria-hidden="true" role="img">
-          <path
-            d="M2.25749 9.75177C10.3927 6.1729 20.9202 1.80951 22.3734 1.20558C26.1853 -0.375101 27.3549 -0.0721691 26.7717 3.42838C26.3529 5.94441 25.1444 14.2744 24.1813 19.4592C23.6097 22.5338 22.3274 22.8983 20.3111 21.5681C19.3415 20.9279 14.4473 17.6915 13.3851 16.9315C12.4154 16.2389 11.0781 15.4059 12.7553 13.765C13.3521 13.1805 17.2643 9.44496 20.3124 6.53732C20.7118 6.15542 20.2101 5.5282 19.7493 5.83437C15.6409 8.55882 9.94473 12.3403 9.21976 12.8329C8.12454 13.5766 7.07269 13.9177 5.18454 13.3753C3.75791 12.9656 2.36429 12.4769 1.82186 12.2905C-0.266948 11.5733 0.228877 10.6444 2.25749 9.75177Z"
-            fill="#ffd900"></path>
-        </svg>
-      </a>
-      <a href="https://dexscreener.com/hyperliquid/0x000000000000000000000000000000000" target="_blank">
-        <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 20 24" fill="none"
-          preserveAspectRatio="xMidYMid meet" aria-hidden="true" role="img">
-          <path
-            d="M14.789 7.58051C13.8931 8.28778 12.9982 8.804 12.295 9.15468C12.809 9.44513 13.375 9.50889 13.8598 9.39968C14.1153 9.34236 14.3464 9.2363 14.5315 9.09061C14.7024 8.95581 14.8323 8.78637 14.9013 8.59156C14.9986 8.31514 14.9779 7.97281 14.789 7.58051Z"
-            fill="#ffd900"></path>
-          <path
-            d="M13.3479 13.2856L12.4169 12.7478C12.3268 12.7138 12.2499 12.6521 12.197 12.5716C12.1441 12.4912 12.1181 12.396 12.1226 12.2999C12.2079 10.4953 11.7207 9.69733 11.0635 9.19629C10.8277 9.01681 10.5703 8.92669 10.3164 8.92669C10.0625 8.92669 9.8052 9.01681 9.56947 9.19629C8.91225 9.69733 8.42501 10.4953 8.51031 12.2999C8.51482 12.396 8.48879 12.4912 8.43593 12.5716C8.38306 12.6521 8.30609 12.7138 8.21603 12.7478L7.28508 13.2856C9.06534 14.2834 9.63157 16.082 10.2005 17.8892C10.239 18.0115 10.2775 18.1339 10.3164 18.256C10.3554 18.1337 10.394 18.0112 10.4325 17.8888C11.0014 16.0818 11.5677 14.2833 13.3479 13.2856Z"
-            fill="#ffd900"></path>
-          <path
-            d="M13.4076 1.60916C12.4713 1.20277 11.3925 0.993857 10.3164 0.964966C9.2404 0.993857 8.16162 1.20277 7.2253 1.60916C6.57697 1.89095 5.97202 2.26317 5.42424 2.70827C5.17694 2.9092 4.97325 3.1034 4.74878 3.32679C4.1436 3.34771 3.25916 2.67539 2.84863 2.04629C3.55528 4.36298 6.77983 7.09878 9.01234 8.14562C9.01326 8.14532 9.01387 8.14463 9.01456 8.14424C9.41521 7.83831 9.86574 7.68535 10.3164 7.68535C10.7671 7.68535 11.2177 7.83831 11.6184 8.14424C11.6191 8.1447 11.6197 8.14524 11.6206 8.14562C13.853 7.09878 17.0777 4.36298 17.7843 2.04629C17.3737 2.67539 16.4893 3.34771 15.8841 3.32679C15.6597 3.10332 15.456 2.9092 15.2086 2.70827C14.6608 2.26317 14.0559 1.89095 13.4076 1.60916Z"
-            fill="#ffd900"></path>
-          <path
-            d="M5.84389 7.58051C6.73975 8.28778 7.63468 8.804 8.33788 9.15468C7.82389 9.44513 7.25795 9.50889 6.77316 9.39968C6.51766 9.34236 6.28653 9.2363 6.10138 9.09061C5.93056 8.95581 5.80059 8.78637 5.73154 8.59156C5.63429 8.31514 5.65499 7.97281 5.84389 7.58051Z"
-            fill="#ffd900"></path>
-          <path
-            d="M17.0472 5.17322C16.6978 5.66483 16.2632 6.21576 15.7699 6.71351L15.924 7.03354C16.2232 7.65505 16.3224 8.34983 16.0892 9.01066C15.939 9.43629 15.6646 9.8013 15.3111 10.0799C14.9679 10.3505 14.5615 10.5329 14.1361 10.6287C13.859 10.6911 13.5767 10.7168 13.2962 10.7081C13.3616 11.079 13.3902 11.4638 13.392 11.8559L15.8953 13.3017L13.9637 14.3845C13.8093 14.471 13.6623 14.5702 13.5242 14.681C12.2253 15.8472 11.3489 18.8762 10.7128 21.0746C10.569 21.5716 10.4375 22.0261 10.3162 22.4071C10.1949 22.0262 10.0634 21.5719 9.91971 21.0751C9.28366 18.8767 8.40718 15.8473 7.10818 14.681C6.97012 14.5702 6.82315 14.471 6.66876 14.3845L4.73711 13.3017L7.24029 11.8559C7.24213 11.4638 7.27072 11.079 7.33616 10.7081C7.05568 10.7168 6.77336 10.6911 6.49625 10.6287C6.07085 10.5329 5.66454 10.3505 5.32122 10.0799C4.96762 9.8013 4.69335 9.43629 4.54307 9.01066C4.30995 8.34983 4.40904 7.65498 4.70829 7.03354L4.86233 6.71359C4.36903 6.21576 3.93452 5.66491 3.58506 5.17329L3.40765 5.50735C2.83611 6.65044 2.53931 7.78901 2.53931 9.07043L2.54054 11.1037L2.52981 12.1578C2.48835 14.7454 1.92846 17.3635 0.660156 19.7595L3.31385 17.6196L5.19147 20.6666L7.16397 18.8096L10.3161 23.9249L13.4682 18.8096L15.4408 20.6665L17.3184 17.6196L19.972 19.7594C18.7037 17.3634 18.1438 14.7454 18.1025 12.1577L18.0917 11.1036L18.093 9.07035C18.093 7.78901 17.7961 6.65044 17.2247 5.50727L17.0472 5.17322Z"
-            fill="#ffd900"></path>
-        </svg>
-      </a>
-      <a href="https://www.dextools.io/app/en/hyperliquid/pair-explorer/0x000000000000000000000000000000000?t=1726356373318"
-        target="_blank">
-        <svg width="60" height="60" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <g clip-path="url(#clip0_3058_1329)">
-            <path fill-rule="evenodd" clip-rule="evenodd"
-              d="M9.78405 2.19883C8.53443 2.84979 7.51206 3.40063 7.51227 3.42303C7.51283 3.48086 10.5114 4.99946 10.6178 4.99576C10.6663 4.99414 11.0175 4.83247 11.3983 4.63654L12.0907 4.28037L12.847 4.66911L13.6032 5.05791L14.8417 4.50141C16.7079 3.66285 16.9017 3.57096 16.8713 3.54009C16.831 3.49913 16.1616 3.13954 14.3457 2.18349C13.468 1.72142 12.6162 1.26838 12.4527 1.17671C12.2892 1.08503 12.1331 1.01129 12.1058 1.01272C12.0785 1.01414 11.0337 1.5479 9.78405 2.19883ZM4.3032 5.03701L3.00235 5.70894V8.65793C3.00235 10.2799 3.01943 11.6069 3.04038 11.6069C3.06126 11.6069 3.70128 11.3295 4.46261 10.9904L5.84686 10.3738V7.26541L6.52329 7.63394C7.04454 7.91767 7.56611 8.20082 8.08799 8.48339L8.97622 8.96431L9.37146 8.78558C9.61934 8.67331 9.86673 8.55995 10.1136 8.4455C10.3044 8.35666 10.7727 8.14573 11.1543 7.97668C11.5358 7.80756 11.8891 7.6375 11.9391 7.59874C12.0057 7.54725 11.1944 7.09892 8.9384 5.94044C7.23788 5.06718 5.79199 4.35547 5.72531 4.35888C5.65863 4.36229 5.01868 4.66741 4.3032 5.03701ZM17.1057 5.2257C16.2198 5.62566 15.4943 5.96889 15.4935 5.98846C15.4927 6.00801 15.9756 6.29513 16.5666 6.6264C17.1576 6.95775 17.6411 7.24656 17.6411 7.26831C17.6411 7.29001 17.1181 7.5434 16.479 7.83151C15.8398 8.11955 14.2243 8.84916 12.8887 9.45289L8.41384 11.4756C7.28818 11.9845 6.27353 12.4431 6.15907 12.495C3.85985 13.5358 3.22789 13.8246 3.1411 13.8742C3.05383 13.9241 3.03407 14.2141 3.01853 15.6695L3 17.4053L4.16328 17.998L5.32653 18.5907L6.93956 17.8627C7.82676 17.4624 8.5526 17.1138 8.5526 17.0882C8.5526 17.0626 8.38865 16.9557 8.18837 16.8507C7.98799 16.7456 7.57436 16.5131 7.26909 16.3338C6.96385 16.1545 6.65949 15.99 6.59266 15.9682C6.52586 15.9464 6.47217 15.9084 6.47326 15.8835C6.47437 15.8588 7.18468 15.5214 8.05162 15.1337C9.7355 14.3809 11.0241 13.8006 13.7906 12.5495C15.0277 11.9902 16.265 11.4312 17.5024 10.8726C18.5899 10.3817 19.8543 9.80843 20.3122 9.59862L21.1447 9.21714L21.1632 7.46155L21.1818 5.70604L20.002 5.10045C19.353 4.76741 18.7983 4.49573 18.7693 4.49672C18.7402 4.49764 17.9916 4.82564 17.1057 5.2257ZM20.8286 11.5592C20.6548 11.6441 20.3113 11.8031 20.0655 11.9125C19.8196 12.0219 19.353 12.2324 19.0287 12.3804L18.439 12.6494L18.4255 14.1906C18.4181 15.0383 18.3869 15.7281 18.3561 15.7236C18.2863 15.7132 17.1811 15.1464 16.0701 14.551C15.2682 14.1214 15.2178 14.1043 15.0294 14.1977C14.9205 14.2516 14.2694 14.5436 13.5825 14.8467C12.8957 15.1497 12.3113 15.4174 12.2838 15.4416C12.2564 15.4658 13.6388 16.215 15.3558 17.1066L18.4776 18.7278L19.8112 18.0379C20.5446 17.6585 21.1682 17.3125 21.197 17.2689C21.2616 17.1711 21.2561 11.3913 21.1913 11.3992C21.1657 11.4022 21.0025 11.4743 20.8286 11.5592ZM13.4438 18.3431C13.2124 18.4426 12.9812 18.5422 12.75 18.6419C12.0518 18.944 12.1886 18.954 11.358 18.5405C10.8048 18.2651 10.5664 18.1801 10.4629 18.2214C10.3852 18.2523 9.71703 18.5529 8.97789 18.8894C8.23879 19.2259 7.60842 19.5012 7.57707 19.5012C7.26697 19.5012 7.7825 19.8092 9.77186 20.8127L12.1049 21.9894L13.0865 21.5048C13.6264 21.2383 14.7154 20.7045 15.5065 20.3187C16.2975 19.9328 16.935 19.6071 16.9231 19.5948C16.911 19.5825 16.2482 19.2422 15.45 18.8384L13.9988 18.1044L13.4438 18.3431Z"
-              fill="#ffd900"></path>
-          </g>
-          <defs>
-            <clipPath id="clip0_3058_1329">
-              <rect width="18.2616" height="21" fill="white" transform="translate(3 1)">
-              </rect>
-            </clipPath>
-          </defs>
-        </svg>
-      </a>
-    </div>
-  </div>
+        // Ceiling
+        try {
+            const ceilingGeometry = new THREE.PlaneGeometry(20, 20);
+            const ceilingMaterial = new THREE.MeshStandardMaterial({
+                color: 0x8B4513,
+                roughness: 0.9
+            });
+            const ceiling = new THREE.Mesh(ceilingGeometry, ceilingMaterial);
+            ceiling.rotation.x = Math.PI / 2;
+            ceiling.position.y = 8;
+            scene.add(ceiling);
+            console.log("Ceiling added to scene");
+        } catch (e) {
+            console.error("Failed to create ceiling:", e);
+        }
 
-  </script>
-  <script type="module" src="bundle.js">
-  </script>
+        // Light Bulb
+        let bulb, bulbLight;
+        try {
+            const bulbGeometry = new THREE.SphereGeometry(0.3, 32, 32);
+            const bulbMaterial = new THREE.MeshStandardMaterial({
+                color: 0xffff00,
+                emissive: 0xffff00,
+                emissiveIntensity: 0.5
+            });
+            bulb = new THREE.Mesh(bulbGeometry, bulbMaterial);
+            bulb.position.set(0, 7.7, 0);
+            scene.add(bulb);
+            bulbLight = new THREE.PointLight(0xffff00, 1, 15);
+            bulbLight.position.set(0, 7.7, 0);
+            scene.add(bulbLight);
+            console.log("Light bulb and light added to scene");
+        } catch (e) {
+            console.error("Failed to create light bulb:", e);
+        }
 
-  <script>
-    function copyFunction() {
-      // Copy the text inside the text field
-      navigator.clipboard.writeText("0x000000000000000000000000000000000");
+        // Create fallback texture
+        function createFallbackTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256;
+            canvas.height = 256;
+            const context = canvas.getContext('2d');
+            context.fillStyle = '#333333';
+            context.fillRect(0, 0, 256, 256);
+            context.fillStyle = '#ff0000';
+            context.font = 'bold 30px Arial';
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+            context.fillText('Image Failed', 128, 128);
+            return new THREE.CanvasTexture(canvas);
+        }
 
-      // // Alert the copied text
-      // alertTimeout("✅", 1000)
-    }
-    // function alertTimeout(mymsg, mymsecs) {
-    //   var myelement = document.createElement("div");
-    //   myelement.setAttribute("style", "background-color: #00584C; display:block;color:white; width: 100px;height: 80px;position: absolute;top:20%;bottom:0;left:0;right:0;margin:auto;border: 4px solid black;font-family:arial;font-size:35px;font-weight:bold;display: flex; align-items: center; justify-content: center; text-align: center; border-radius: 20px; border-width: 1.5px; border-color: white;");
-    //   myelement.innerHTML = mymsg;
-    //   setTimeout(function () {
-    //     myelement.parentNode.removeChild(myelement);
-    //   }, mymsecs);
-    //   document.body.appendChild(myelement);
-    // }
-  </script>
+        // Pictures
+        let pictures = [];
+        let currentPictureSet = 1;
+        async function loadPictures() {
+            try {
+                const pictureGeometry = new THREE.PlaneGeometry(3.0, 2.25);
+                const frameMaterial = new THREE.MeshStandardMaterial({
+                    color: 0x333333,
+                    roughness: 0.7
+                });
+
+                const textureLoader = new THREE.TextureLoader();
+                const fallbackTexture = createFallbackTexture();
+                const imageFiles = [
+                    'slika_1.jpeg', 'slika_2.jpeg', 'slika_3.jpeg', 'slika_4.jpeg', 'slika_5.jpeg', 'slika_6.jpeg',
+                    'slika_7.jpeg', 'slika_8.jpeg', 'slika_9.jpeg', 'slika_10.jpeg', 'slika_11.jpeg', 'slika_12.jpeg'
+                ];
+
+                const loadTexture = (file) => {
+                    return new Promise((resolve) => {
+                        textureLoader.load(
+                            file,
+                            (texture) => {
+                                console.log(`Texture loaded: ${file}`);
+                                resolve(texture);
+                            },
+                            undefined,
+                            (error) => {
+                                console.error(`Failed to load texture: ${file}`, error);
+                                resolve(fallbackTexture);
+                            }
+                        );
+                    });
+                };
+
+                const pictureMaterialsSet1 = [];
+                const pictureMaterialsSet2 = [];
+                for (let i = 0; i < 6; i++) {
+                    const texture1 = await loadTexture(imageFiles[i]);
+                    pictureMaterialsSet1.push(new THREE.MeshStandardMaterial({ map: texture1, emissive: 0x111111 }));
+                    const texture2 = await loadTexture(imageFiles[i + 6]);
+                    pictureMaterialsSet2.push(new THREE.MeshStandardMaterial({ map: texture2, emissive: 0x111111 }));
+                }
+
+                const pictureConfigs = [
+                    { name: 'slika_1', x: -9.85, z: -5, rotation: Math.PI / 2 },
+                    { name: 'slika_2', x: -9.85, z: 0, rotation: Math.PI / 2 },
+                    { name: 'slika_3', x: -9.85, z: 5, rotation: Math.PI / 2 },
+                    { name: 'slika_4', x: 9.85, z: -5, rotation: -Math.PI / 2 },
+                    { name: 'slika_5', x: 9.85, z: 0, rotation: -Math.PI / 2 },
+                    { name: 'slika_6', x: 9.85, z: 5, rotation: -Math.PI / 2 }
+                ];
+
+                pictures = pictureConfigs.map((pic, i) => {
+                    const frame = new THREE.Mesh(new THREE.PlaneGeometry(2.8, 2.05), frameMaterial);
+                    frame.position.set(pic.x > 0 ? 9.9 : -9.9, 3, pic.z);
+                    frame.rotation.y = pic.rotation;
+                    scene.add(frame);
+                    const picture = new THREE.Mesh(pictureGeometry, pictureMaterialsSet1[i]);
+                    picture.position.set(pic.x, 3, pic.z);
+                    picture.rotation.y = pic.rotation;
+                    picture.name = pic.name;
+                    scene.add(picture);
+                    return { mesh: picture, frame: frame, config: pic, materialSet1: pictureMaterialsSet1[i], materialSet2: pictureMaterialsSet2[i] };
+                });
+                console.log("Pictures added to scene with size 3.0x2.25");
+            } catch (e) {
+                console.error("Failed to create pictures:", e);
+            }
+        }
+        loadPictures();
+
+        function updatePictures() {
+            const isSet1 = currentPictureSet === 1;
+            pictures.forEach(pic => {
+                pic.mesh.material = isSet1 ? pic.materialSet2 : pic.materialSet1;
+                pic.mesh.name = isSet1 ? `slika_${pic.config.name.split('_')[1] * 1 + 6}` : pic.config.name;
+            });
+            currentPictureSet = isSet1 ? 2 : 1;
+            console.log(`Pictures updated to set ${currentPictureSet}`);
+        }
+
+        // Press Me Button
+        let pressButton;
+        try {
+            const buttonGeometry = new THREE.CylinderGeometry(0.5, 0.5, 0.2, 32);
+            const buttonMaterial = new THREE.MeshStandardMaterial({
+                color: 0x00ff00,
+                emissive: 0x00ff00,
+                emissiveIntensity: 0.5
+            });
+            pressButton = new THREE.Mesh(buttonGeometry, buttonMaterial);
+            pressButton.position.set(0, 2, -9.9);
+            pressButton.rotation.x = Math.PI / 2;
+            pressButton.name = 'pressButton';
+            scene.add(pressButton);
+            console.log("Button added to scene");
+        } catch (e) {
+            console.error("Failed to create button:", e);
+        }
+
+        // Press Me Label
+        try {
+            const canvas = document.createElement('canvas');
+            canvas.width = 600;
+            canvas.height = 64;
+            const context = canvas.getContext('2d');
+            context.fillStyle = 'rgba(0, 0, 0, 0)';
+            context.fillRect(0, 0, canvas.width, canvas.height);
+            context.font = 'bold 50px Courier New';
+            context.fillStyle = '#00ff00';
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+            context.fillText('Press me for print', canvas.width / 2, canvas.height / 2);
+
+            const texture = new THREE.CanvasTexture(canvas);
+            const labelGeometry = new THREE.PlaneGeometry(3.5, 0.5);
+            const labelMaterial = new THREE.MeshBasicMaterial({
+                map: texture,
+                transparent: true,
+                side: THREE.DoubleSide
+            });
+            const label = new THREE.Mesh(labelGeometry, labelMaterial);
+            label.position.set(0, 2.7, -9.8);
+            label.rotation.y = Math.PI * 2;
+            scene.add(label);
+            console.log("Label 'Press me for print' added at position (0, 2.7, -9.8)");
+        } catch (e) {
+            console.error("Failed to create label:", e);
+        }
+
+        // Lighting
+        try {
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+            scene.add(ambientLight);
+            console.log("Ambient lighting added to scene");
+        } catch (e) {
+            console.error("Failed to create lighting:", e);
+        }
+
+        // Camera position
+        camera.position.set(0, 1.6, 0);
+        console.log("Camera positioned");
+
+        // Pointer lock controls
+        let isLocked = !isMobile;
+        let isNearButton = false;
+        try {
+            controls = new THREE.PointerLockControls(camera, renderer.domElement);
+            console.log("PointerLockControls initialized");
+        } catch (e) {
+            console.error("Failed to initialize PointerLockControls:", e);
+            document.getElementById('fallback').style.display = 'block';
+        }
+
+        // Joystick setup for mobile
+        let joystickMove = { x: 0, z: 0 };
+        if (isMobile) {
+            const joystickContainer = document.getElementById('joystick-container');
+            try {
+                const joystick = nipplejs.create({
+                    zone: joystickContainer,
+                    mode: 'static',
+                    position: { left: '50%', top: '50%' },
+                    color: 'green',
+                    size: 100,
+                    threshold: 0.1
+                });
+                joystick.on('move', (evt, data) => {
+                    if (data.vector) {
+                        // Map joystick input to match desktop controls
+                        // data.vector.y: positive = up (forward), negative = down (backward)
+                        // data.vector.x: negative = left, positive = right
+                        const magnitude = Math.min(1, Math.sqrt(data.vector.x ** 2 + data.vector.y ** 2));
+                        joystickMove.x = data.vector.x / (magnitude || 1) * 0.1; // Sideways (left/right)
+                        joystickMove.z = -data.vector.y / (magnitude || 1) * 0.1; // Forward/backward
+                        console.log(`Joystick move: x=${joystickMove.x}, z=${joystickMove.z}`);
+                    }
+                });
+                joystick.on('end', () => {
+                    joystickMove = { x: 0, z: 0 };
+                    console.log("Joystick released");
+                });
+                console.log("Joystick initialized for mobile");
+            } catch (e) {
+                console.error("Failed to initialize joystick:", e);
+            }
+        }
+
+        // Inverted drag-to-look for mobile
+        let isDragging = false;
+        let previousTouchX = 0;
+        let previousTouchY = 0;
+        if (isMobile) {
+            renderer.domElement.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 1 && !isTerminalOpen && landingPage.style.display === 'none') {
+                    isDragging = true;
+                    previousTouchX = e.touches[0].clientX;
+                    previousTouchY = e.touches[0].clientY;
+                }
+            });
+            renderer.domElement.addEventListener('touchmove', (e) => {
+                if (isDragging && e.touches.length === 1 && !isTerminalOpen && landingPage.style.display === 'none') {
+                    const deltaX = e.touches[0].clientX - previousTouchX;
+                    const deltaY = e.touches[0].clientY - previousTouchY;
+                    const sensitivity = 0.005;
+                    controls.getObject().rotation.y += deltaX * sensitivity;
+                    const newPitch = camera.rotation.x + deltaY * sensitivity;
+                    camera.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, newPitch));
+                    camera.rotation.z = 0;
+                    previousTouchX = e.touches[0].clientX;
+                    previousTouchY = e.touches[0].clientY;
+                    camera.rotation.x=0;
+                }
+            });
+            renderer.domElement.addEventListener('touchend', () => {
+                isDragging = false;
+            });
+            console.log("Inverted drag-to-look initialized for mobile (yaw and pitch, no roll)");
+        }
+
+        // Event listeners for pointer lock (desktop only)
+        if (!isMobile) {
+            renderer.domElement.addEventListener('click', () => {
+                if (!isTerminalOpen && landingPage.style.display === 'none') {
+                    console.log("Click detected, requesting pointer lock");
+                    renderer.domElement.requestPointerLock();
+                }
+            });
+
+            document.addEventListener('pointerlockchange', () => {
+                if (document.pointerLockElement === renderer.domElement) {
+                    isLocked = true;
+                    document.getElementById('instructions').textContent = 'WASD to move | E to interact | T for info in terminal';
+                    console.log("Pointer lock enabled");
+                } else {
+                    isLocked = false;
+                    document.getElementById('instructions').textContent = 'Click to enable controls | WASD to move | E to interact | T for info in terminal';
+                    console.log("Pointer lock disabled");
+                }
+            });
+
+            document.addEventListener('pointerlockerror', () => {
+                console.error("Pointer lock error occurred");
+                document.getElementById('instructions').textContent = 'Pointer lock failed. Try another browser or host on a server.';
+            });
+        }
+
+        // Terminal functionality
+        const terminal = document.getElementById('terminal');
+        const terminalOutput = document.getElementById('terminalOutput');
+        const terminalInput = document.getElementById('terminalInput');
+        const terminalBtn = document.getElementById('terminal-btn');
+        let isTerminalOpen = false;
+        let commandHistory = [];
+        let historyIndex = -1;
+
+        const commands = {
+            help: {
+                desc: "Display available commands",
+                execute: () => {
+                    printToTerminal("> help", "command");
+                    printToTerminal("Available commands:", "info");
+                    printToTerminal("----------------", "info");
+                    printToTerminal("help - Display available commands", "info");
+                    printToTerminal("about - Describe HyperPrinter coin", "info");
+                    printToTerminal("contract - Show contract address", "info");
+                    printToTerminal("social - Show social media links", "info");
+                    printToTerminal("buy - How to buy $HYPERPRINT instructions", "info");
+                }
+            },
+            about: {
+                desc: "Describe HyperPrinter coin",
+                execute: () => {
+                    printToTerminal("ABOUT", "info");
+                    printToTerminal("Hyper Printer is a reward-based token built on the Hyper EVM chain. It automatically rewards holders with the native $HYPER token, promoting long-term holding and community growth.", "info");
+                    printToTerminal("Our goal is to create a sustainable ecosystem where users benefit simply by holding.", "info");
+                    printToTerminal("$HYPERPRINTERNOMICS", "info");
+                    printToTerminal("LIQUIDITY: BURNED", "info");
+                    printToTerminal("OWNERSHIP: RENOUNCED", "info");
+                    printToTerminal("TAX: 2/2 to $HYPE rewards", "info");
+                    printToTerminal("SUPPLY: 1,000,000,000", "info");
+                }
+            },
+            contract: {
+                desc: "Show contract address",
+                execute: () => {
+                    const contractAddress = "0x000000000000000000000000000000000";
+                    printToTerminal(`Contract Address: ${contractAddress} <span class="copy-btn" onclick="navigator.clipboard.writeText('${contractAddress}').then(() => alert('Copied!'))">Copy</span>`, "info", true);
+                }
+            },
+            social: {
+                desc: "Show social media links",
+                execute: () => {
+                    printToTerminal("Social Media:", "info");
+                    printToTerminal('<a href="https://twitter.com/hyperprinter" target="_blank">Twitter</a>', "info", true);
+                    printToTerminal('<a href="https://t.me/hyperprinter" target="_blank">Telegram</a>', "info", true);
+                    printToTerminal('<a href="https://discord.com/invite/hyperprinter" target="_blank">Discord</a>', "info", true);
+                }
+            },
+            buy: {
+                desc: "How to buy $HYPERPRINT instructions",
+                execute: () => {
+                    printToTerminal("HOW TO BUY ?", "info");
+                    printToTerminal("1. Add chain to MetaMask", "info");
+                    printToTerminal("First things first, you'll need to install the MetaMask wallet. Since the HyperChain is new, you'll need to manually add the chain to your wallet.", "info");
+                    printToTerminal('The RPC endpoint is: <a href="https://rpc.hyperliquid.xyz/evm" target="_blank">https://rpc.hyperliquid.xyz/evm</a>', "info", true);
+                    printToTerminal("The Chain ID is: 999", "info");
+                    printToTerminal("Symbol: $HYPE", "info");
+                    printToTerminal("2. Get $HYPE", "info");
+                    printToTerminal("Go to your favorite exchange, buy some HYPE, and then send it directly to your MetaMask wallet. After selecting the previously added chain, you should be able to see your HYPE tokens.", "info");
+                    printToTerminal("3. Buy $HYPERPRINT", "info");
+                    printToTerminal('Visit <a href="https://app.hyperswap.exchange" target="_blank">https://app.hyperswap.exchange</a>', "info", true);
+                    printToTerminal("Swap your $HYPE for $HYPERPRINT using the official contract address (CA) found on our page!", "info");
+                }
+            }
+        };
+
+        function printToTerminal(text, type = "", isHtml = false) {
+            const line = document.createElement('div');
+            line.className = `output ${type}`;
+            if (isHtml) {
+                line.innerHTML = text;
+            } else {
+                line.textContent = text;
+            }
+            terminalOutput.appendChild(line);
+            terminalOutput.scrollTop = terminalOutput.scrollHeight;
+        }
+
+        function activateTerminal() {
+            isTerminalOpen = true;
+            terminal.style.display = 'block';
+            terminalBtn.classList.add('terminal-hidden');
+            terminalInput.focus();
+            if (!isMobile) document.exitPointerLock();
+            isLocked = !isMobile;
+            printToTerminal("HyperPrinter online. $TERMINAL READY", "success");
+            commands.help.execute();
+            console.log("Terminal activated");
+        }
+
+        window.closeTerminal = function() {
+            isTerminalOpen = false;
+            terminal.style.display = 'none';
+            terminalBtn.classList.remove('terminal-hidden');
+            console.log("Terminal closed");
+        };
+
+        window.toggleTerminal = function() {
+            if (isTerminalOpen) {
+                closeTerminal();
+            } else {
+                activateTerminal();
+            }
+        };
+
+        terminalInput.addEventListener('keydown', (e) => {
+            if (!isTerminalOpen) return;
+            if (e.key === 'Enter') {
+                const command = terminalInput.value.trim();
+                terminalInput.value = '';
+                if (command) {
+                    commandHistory.push(command);
+                    historyIndex = commandHistory.length;
+                    printToTerminal(`> ${command}`, "command");
+                    if (commands[command]) {
+                        commands[command].execute();
+                    } else {
+                        printToTerminal(`Command not found: ${command}`, "error");
+                        printToTerminal(`Type 'help' for available commands`, "info");
+                    }
+                }
+            } else if (e.key === 'ArrowUp') {
+                if (commandHistory.length > 0) {
+                    if (historyIndex > -1) historyIndex--;
+                    terminalInput.value = commandHistory[historyIndex] || '';
+                }
+            } else if (e.key === 'ArrowDown') {
+                if (commandHistory.length > 0) {
+                    if (historyIndex < commandHistory.length - 1) historyIndex++;
+                    terminalInput.value = commandHistory[historyIndex] || '';
+                }
+            }
+        });
+
+        // Keyboard controls
+        const keyState = {};
+        let isTerminalInputLocked = false;
+        document.addEventListener('keydown', (e) => {
+            if (landingPage.style.display !== 'none') return;
+            if (isTerminalOpen && !isTerminalInputLocked && e.key.toLowerCase() === 't') {
+                return;
+            }
+            if (isTerminalOpen && e.key.toLowerCase() === 'x') {
+                closeTerminal();
+                isTerminalInputLocked = false;
+                return;
+            }
+            if (isTerminalOpen || isMobile) {
+                return;
+            }
+            keyState[e.key.toLowerCase()] = true;
+            if (e.key.toLowerCase() === 'e' && isNearButton) {
+                triggerButtonEffects();
+                console.log("Button pressed");
+            }
+            if (e.key.toLowerCase() === 't') {
+                activateTerminal();
+                isTerminalInputLocked = true;
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            keyState[e.key.toLowerCase()] = false;
+        });
+
+        // Mobile interaction (tap near button)
+        if (isMobile) {
+            renderer.domElement.addEventListener('touchstart', (e) => {
+                if (landingPage.style.display !== 'none' || isTerminalOpen) return;
+                if (isNearButton) {
+                    triggerButtonEffects();
+                    console.log("Button activated via tap");
+                }
+            });
+        }
+
+        // Button effects
+        function triggerButtonEffects() {
+            pressButton.position.z = -10.05;
+            setTimeout(() => {
+                pressButton.position.z = -9.9;
+            }, 500);
+
+            const now = new Date();
+            document.getElementById('printTime').textContent = now.toLocaleTimeString();
+            document.getElementById('printedCoin').style.display = 'block';
+            setTimeout(() => {
+                document.getElementById('printedCoin').style.display = 'none';
+            }, 3000);
+
+            let flickerCount = 0;
+            const flickerInterval = setInterval(() => {
+                bulbLight.intensity = flickerCount % 2 === 0 ? 0 : 1;
+                bulb.material.emissiveIntensity = flickerCount % 2 === 0 ? 0 : 0.5;
+                flickerCount++;
+                if (flickerCount >= 8) {
+                    clearInterval(flickerInterval);
+                    bulbLight.intensity = 1;
+                    bulb.material.emissiveIntensity = 0.5;
+                }
+            }, 200);
+
+            updatePictures();
+        }
+
+        // Movement function with collision detection
+        function handleMovement() {
+            if (!isLocked && !isMobile || isTerminalOpen || landingPage.style.display !== 'none') return;
+            const moveSpeed = 0.1;
+            const moveVector = new THREE.Vector3();
+            if (isMobile) {
+                // Use joystick input directly for moveRight and moveForward
+                // joystickMove.z: positive = forward, negative = backward
+                // joystickMove.x: negative = left, positive = right
+                moveVector.x = joystickMove.x; // Sideways movement
+                moveVector.z = -joystickMove.z; // Forward/backward movement
+            } else {
+                if (keyState['s']) moveVector.z -= moveSpeed; // Forward
+                if (keyState['w']) moveVector.z += moveSpeed; // Backward
+                if (keyState['a']) moveVector.x -= moveSpeed; // Left
+                if (keyState['d']) moveVector.x += moveSpeed; // Right
+            }
+
+            const currentPosition = controls.getObject().position.clone();
+            controls.moveRight(moveVector.x);
+            controls.moveForward(moveVector.z);
+
+            const newPosition = controls.getObject().position;
+            const roomHalfSize = 10;
+            let hitWall = false;
+
+            if (newPosition.x < -roomHalfSize + 0.2) {
+                newPosition.x = -roomHalfSize + 0.2;
+                hitWall = true;
+            }
+            if (newPosition.x > roomHalfSize - 0.2) {
+                newPosition.x = roomHalfSize - 0.2;
+                hitWall = true;
+            }
+            if (newPosition.z < -roomHalfSize + 0.2) {
+                newPosition.z = -roomHalfSize + 0.2;
+                hitWall = true;
+            }
+            if (newPosition.z > roomHalfSize - 0.2) {
+                newPosition.z = roomHalfSize - 0.2;
+                hitWall = true;
+            }
+            if (newPosition.y < 1.6) {
+                newPosition.y = 1.6;
+            }
+            if (newPosition.y > 7.5) {
+                newPosition.y = 7.5;
+            }
+
+            if (hitWall) {
+                controls.getObject().position.copy(newPosition);
+            }
+
+            const cameraPosition = controls.getObject().position;
+            const distanceToButton = cameraPosition.distanceTo(pressButton.position);
+            isNearButton = distanceToButton < 2;
+            document.getElementById('instructions').textContent = isMobile
+                ? (isNearButton ? 'Tap to activate button | Drag to look | Tap Terminal for info' : 'Use joystick to move | Drag to look | Tap Terminal for info')
+                : (isNearButton ? 'Press E to activate button | T for info in terminal' : 'WASD to move | T for info in terminal');
+        }
+
+        // Scanline text refresh
+        const scanline = document.getElementById('scanline');
+        const allTextElements = Array.from(document.querySelectorAll('.terminal, .terminal-title, .command-line, .output, .prompt, .command, #instructions, #terminal-btn, #landing-page h1, #landing-page p'));
+        function randomFade() {
+            allTextElements.forEach(el => {
+                if (Math.random() > 0.7) {
+                    el.style.opacity = Math.max(0.5, Math.random() * 0.8);
+                }
+            });
+            setTimeout(randomFade, 1000);
+        }
+        randomFade();
+        scanline.addEventListener('animationiteration', () => {
+            allTextElements.forEach((el, i) => {
+                setTimeout(() => {
+                    el.style.opacity = 1;
+                    el.style.textShadow = '0 0 10px #0f0';
+                    setTimeout(() => {
+                        el.style.textShadow = '0 0 5px #0f0';
+                    }, 1000);
+                }, i * 50);
+            });
+        });
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            handleMovement();
+            try {
+                renderer.render(scene, camera);
+            } catch (e) {
+                console.error("Rendering error:", e);
+                document.getElementById('fallback').style.display = 'block';
+            }
+        }
+
+        animate();
+        console.log("Animation loop started");
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            console.log("Window resized");
+        });
+
+        // Initial debug message
+        console.log("Scene setup complete. If only text is visible, check console errors or WebGL support.");
+    </script>
 </body>
-
-
 </html>
