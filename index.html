@@ -3,11 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HyperPrinter Coin Gallery</title>
+    <title>HyperPrinter</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/controls/PointerLockControls.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/nipplejs@0.10.0/dist/nipplejs.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" href="./printer.svg" type="image/x-icon" />
+
     <style>
         body {
             margin: 0;
@@ -793,9 +795,10 @@
                 desc: "Show social media links",
                 execute: () => {
                     printToTerminal("Social Media:", "info");
-                    printToTerminal('<a href="https://twitter.com/hyperprinter" target="_blank">Twitter</a>', "info", true);
-                    printToTerminal('<a href="https://t.me/hyperprinter" target="_blank">Telegram</a>', "info", true);
-                    printToTerminal('<a href="https://discord.com/invite/hyperprinter" target="_blank">Discord</a>', "info", true);
+                    printToTerminal('<a href="https://x.com/Hyper_Printer" target="_blank">Twitter</a>', "info", true);
+                    printToTerminal('<a href="https://t.me/hyperprintertg" target="_blank">Telegram</a>', "info", true);
+                    printToTerminal('<a href="https://t.me/HyperprinterBot" target="_blank">Rewards Bot</a>', "info", true);
+                    printToTerminal('<a href="https://docs.hyperprinter.xyz/" target="_blank">Docs</a>', "info", true);
                 }
             },
             buy: {
